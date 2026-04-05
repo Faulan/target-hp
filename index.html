@@ -26,6 +26,11 @@
                 </button>
             </div>
 
+            <div class="flex items-center justify-center gap-2 mb-6 bg-white/10 py-2 rounded-xl border border-white/10">
+                <i class="fas fa-bullseye text-emerald-400 text-xs"></i>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em]">Target Total: Rp 5.000.000</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div class="bg-white/10 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
                     <p class="text-[10px] opacity-80 uppercase font-bold mb-1">Total Bayu</p>
@@ -109,7 +114,7 @@
         const TARGET_GOAL = 5000000;
         const DAILY_REQD = 10000;
         const STORAGE_KEY = 'hp_ip_tracker_persistent_final';
-        const START_DATE = new Date(2026, 3, 1); // 1 April 2026
+        const START_DATE = new Date(2026, 3, 1); 
         const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
         
         let activeMonth = 3; 
@@ -140,15 +145,9 @@
             currentTargetPerson = person;
             document.getElementById('modal-title').innerText = `INPUT : ${person}`;
             document.getElementById('modal-subtitle').innerText = `Target Rp 10.000 / Hari`;
-            
             const inputField = document.getElementById('amount-input');
-            
-            // IMPLEMENTASI: Jika earnedNow (saldo hari ini) adalah 0, input dikosongkan.
-            // Jika sudah ada isinya (> 0), tampilkan angka tersebut untuk diedit.
             inputField.value = earnedNow === 0 ? '' : earnedNow; 
-            
             document.getElementById('input-modal').classList.remove('hidden');
-            
             document.getElementById('save-btn').onclick = function() {
                 const newVal = parseInt(inputField.value) || 0;
                 data[currentTargetPerson] = (data[currentTargetPerson] - earnedNow) + newVal;
@@ -166,13 +165,11 @@
         function calcStatus(saldo, threshold) {
             const isLunas = saldo >= threshold;
             let earnedThisDay = 0;
-            
             if (isLunas) {
                 earnedThisDay = DAILY_REQD;
             } else if (saldo > (threshold - DAILY_REQD)) {
                 earnedThisDay = saldo % DAILY_REQD;
             }
-
             return {
                 isLunas: isLunas,
                 earned: earnedThisDay,
@@ -185,7 +182,6 @@
             const color = s.isLunas ? 'text-emerald-600' : 'text-rose-500';
             const bg = s.isLunas ? 'bg-emerald-50' : 'bg-rose-50';
             const icon = s.isLunas ? 'fa-check-circle' : 'fa-exclamation-circle';
-            
             return `
                 <div onclick="openModal('${name.toLowerCase()}', ${s.earned})" class="${bg} rounded-2xl p-3 border border-transparent tap-effect transition-all cursor-pointer">
                     <div class="flex justify-between items-center mb-1">
@@ -204,22 +200,16 @@
             const container = document.getElementById('daily-container');
             container.innerHTML = '';
             document.getElementById('current-month-title').innerText = `${MONTH_NAMES[activeMonth]} ${activeYear}`;
-
             const daysInMonth = new Date(activeYear, activeMonth + 1, 0).getDate();
             let monthlyTotal = 0;
-
             for (let day = 1; day <= daysInMonth; day++) {
                 const current = new Date(activeYear, activeMonth, day);
                 if (current < START_DATE) continue;
-
                 const dayIndex = Math.floor((current - START_DATE) / (1000 * 60 * 60 * 24));
                 const threshold = (dayIndex + 1) * DAILY_REQD;
-
                 const resB = calcStatus(data.bayu, threshold);
                 const resF = calcStatus(data.faulan, threshold);
-
                 monthlyTotal += (resB.todayValue + resF.todayValue);
-
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100";
                 card.innerHTML = `
@@ -241,7 +231,6 @@
         function updateDash() {
             const total = data.bayu + data.faulan;
             const progress = Math.min((total / TARGET_GOAL) * 100, 100);
-            
             document.getElementById('total-bayu').innerText = 'Rp ' + data.bayu.toLocaleString('id-ID');
             document.getElementById('total-faulan').innerText = 'Rp ' + data.faulan.toLocaleString('id-ID');
             document.getElementById('grand-percent').innerText = Math.round(progress) + '%';
