@@ -17,7 +17,6 @@
 </head>
 <body class="pb-10">
 
-    <!-- Header & Dashboard -->
     <div class="bg-indigo-700 text-white p-6 rounded-b-[2.5rem] shadow-xl sticky top-0 z-30">
         <div class="max-w-md mx-auto">
             <div class="flex justify-between items-center mb-6">
@@ -50,13 +49,11 @@
         </div>
     </div>
 
-    <!-- Navigasi Bulan -->
     <div class="max-w-md mx-auto px-4 mt-6">
         <div id="month-nav" class="flex gap-2 overflow-x-auto pb-4 custom-scroll snap-x">
         </div>
     </div>
 
-    <!-- Info Box -->
     <div class="max-w-md mx-auto px-4 mb-4">
         <div class="bg-blue-50 border border-blue-100 p-3 rounded-2xl flex items-center gap-3">
             <div class="bg-blue-500 text-white p-2 rounded-lg text-xs"><i class="fas fa-info-circle"></i></div>
@@ -66,7 +63,6 @@
         </div>
     </div>
 
-    <!-- Content Area -->
     <div class="max-w-md mx-auto px-4 space-y-4">
         <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200">
             <div class="flex justify-between items-center">
@@ -84,7 +80,6 @@
         </div>
     </div>
 
-    <!-- Modal Input -->
     <div id="input-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-6 backdrop-blur-sm">
         <div class="bg-white rounded-[2.5rem] w-full max-w-xs p-8 shadow-2xl animate-in zoom-in duration-200">
             <h3 id="modal-title" class="text-center font-black text-slate-800 mb-1 uppercase tracking-tighter text-xl">Input Saldo</h3>
@@ -92,13 +87,13 @@
             
             <div class="space-y-6">
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2 text-center">Nominal Tambahan (Rp)</label>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2 text-center">Nominal (Rp)</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400">Rp</span>
                         <input type="number" id="amount-input" class="w-full bg-slate-100 border-none rounded-2xl py-4 pl-12 pr-4 font-black text-center text-2xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0">
                     </div>
                     <p class="text-[8px] text-slate-400 mt-3 text-center italic leading-tight">
-                        Uang ini akan menambah total saldo dan otomatis menutupi target hari-hari yang belum lunas.
+                        Masukkan nominal untuk hari ini. Jika lebih, akan otomatis mengisi hari berikutnya. Jika ingin edit, silakan ubah angkanya.
                     </p>
                 </div>
                 
@@ -141,23 +136,27 @@
             }
         }
 
-        function openModal(person) {
+        function openModal(person, earnedNow) {
             currentTargetPerson = person;
             document.getElementById('modal-title').innerText = `INPUT : ${person}`;
             document.getElementById('modal-subtitle').innerText = `Target Rp 10.000 / Hari`;
-            document.getElementById('amount-input').value = '';
+            
+            const inputField = document.getElementById('amount-input');
+            
+            // IMPLEMENTASI: Jika earnedNow (saldo hari ini) adalah 0, input dikosongkan.
+            // Jika sudah ada isinya (> 0), tampilkan angka tersebut untuk diedit.
+            inputField.value = earnedNow === 0 ? '' : earnedNow; 
+            
             document.getElementById('input-modal').classList.remove('hidden');
             
             document.getElementById('save-btn').onclick = function() {
-                const val = parseInt(document.getElementById('amount-input').value) || 0;
-                if (val > 0) {
-                    data[currentTargetPerson] += val;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                    closeModal();
-                    render();
-                }
+                const newVal = parseInt(inputField.value) || 0;
+                data[currentTargetPerson] = (data[currentTargetPerson] - earnedNow) + newVal;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                closeModal();
+                render();
             };
-            setTimeout(() => document.getElementById('amount-input').focus(), 100);
+            setTimeout(() => inputField.focus(), 100);
         }
 
         function closeModal() {
@@ -188,14 +187,14 @@
             const icon = s.isLunas ? 'fa-check-circle' : 'fa-exclamation-circle';
             
             return `
-                <div onclick="openModal('${name.toLowerCase()}')" class="${bg} rounded-2xl p-3 border border-transparent tap-effect transition-all cursor-pointer">
+                <div onclick="openModal('${name.toLowerCase()}', ${s.earned})" class="${bg} rounded-2xl p-3 border border-transparent tap-effect transition-all cursor-pointer">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${name}</span>
                         <i class="fas ${icon} ${color} text-[10px]"></i>
                     </div>
                     <p class="text-[11px] font-black ${color}">${s.isLunas ? 'Rp 10.000' : 'Rp ' + s.earned.toLocaleString('id-ID')}</p>
                     <p class="text-[8px] font-bold ${s.isLunas ? 'text-emerald-400' : 'text-rose-400'} mt-1 uppercase">
-                        ${s.isLunas ? 'LUNAS' : 'Sisa: ' + s.gap.toLocaleString('id-ID')}
+                        ${s.isLunas ? 'LUNAS' : 'Kurang: ' + s.gap.toLocaleString('id-ID')}
                     </p>
                 </div>
             `;
