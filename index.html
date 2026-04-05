@@ -87,6 +87,7 @@
 
     <div id="input-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-6 backdrop-blur-sm">
         <div class="bg-white rounded-[2.5rem] w-full max-w-xs p-8 shadow-2xl animate-in zoom-in duration-200">
+            <p id="modal-date" class="text-center text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2 bg-indigo-50 py-1 rounded-full w-2/3 mx-auto"></p>
             <h3 id="modal-title" class="text-center font-black text-slate-800 mb-1 uppercase tracking-tighter text-xl">Input Saldo</h3>
             <p id="modal-subtitle" class="text-center text-[10px] text-slate-400 font-bold mb-8 uppercase tracking-widest"></p>
             
@@ -141,22 +142,20 @@
             }
         }
 
-        function openModal(person, earnedNow) {
+        // MENAMBAHKAN PARAMETER DATESTR UNTUK MENERIMA TANGGAL
+        function openModal(person, earnedNow, dateStr) {
             currentTargetPerson = person;
+            document.getElementById('modal-date').innerText = dateStr; // Menampilkan tanggal yang diklik
             document.getElementById('modal-title').innerText = `INPUT : ${person}`;
             document.getElementById('modal-subtitle').innerText = `Target Rp 10.000 / Hari`;
             const inputField = document.getElementById('amount-input');
             
-            // Tampilan tetap kosong jika belum ada input di hari itu agar tidak bingung
             inputField.value = ''; 
             
             document.getElementById('input-modal').classList.remove('hidden');
             
             document.getElementById('save-btn').onclick = function() {
                 const newVal = parseInt(inputField.value) || 0;
-                
-                // LOGIKA BARU: Akumulasi total saldo
-                // Sistem menambahkan nominal baru ke total saldo yang sudah ada
                 data[currentTargetPerson] += newVal;
                 
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -171,24 +170,14 @@
         }
 
         function calcStatus(saldo, threshold) {
-            // threshold adalah total tabungan yang seharusnya terkumpul sampai hari ke-N
-            // Contoh: Hari ke-3, threshold = 30.000
-            
             const isLunas = saldo >= threshold;
             let earnedThisDay = 0;
 
             if (saldo >= threshold) {
-                // Jika saldo total sudah melewati batas hari ini, berarti hari ini lunas (10rb)
                 earnedThisDay = DAILY_REQD;
             } else if (saldo > (threshold - DAILY_REQD)) {
-                // Jika saldo total berada di antara (threshold - 10rb) dan threshold,
-                // berarti ada sisa/sebagian uang yang masuk ke hari ini.
-                earnedThisDay = saldo % DAILY_REQD;
-                if (earnedThisDay === 0 && saldo > 0) earnedThisDay = 0; 
-                // Logika sisa: jika saldo 15rb, hari 1 lunas (10rb), hari 2 dapat 5rb.
                 earnedThisDay = saldo - (threshold - DAILY_REQD);
             } else {
-                // Saldo belum mencapai hari ini sama sekali
                 earnedThisDay = 0;
             }
 
@@ -200,12 +189,14 @@
             };
         }
 
-        function renderBox(name, s) {
+        // MENAMBAHKAN PARAMETER DATESTR DI SINI
+        function renderBox(name, s, dateStr) {
             const color = s.isLunas ? 'text-emerald-600' : 'text-rose-500';
             const bg = s.isLunas ? 'bg-emerald-50' : 'bg-rose-50';
             const icon = s.isLunas ? 'fa-check-circle' : 'fa-exclamation-circle';
+            // Menyalurkan dateStr ke fungsi openModal
             return `
-                <div onclick="openModal('${name.toLowerCase()}', ${s.earned})" class="${bg} rounded-2xl p-3 border border-transparent tap-effect transition-all cursor-pointer">
+                <div onclick="openModal('${name.toLowerCase()}', ${s.earned}, '${dateStr}')" class="${bg} rounded-2xl p-3 border border-transparent tap-effect transition-all cursor-pointer">
                     <div class="flex justify-between items-center mb-1">
                         <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${name}</span>
                         <i class="fas ${icon} ${color} text-[10px]"></i>
@@ -224,12 +215,14 @@
             document.getElementById('current-month-title').innerText = `${MONTH_NAMES[activeMonth]} ${activeYear}`;
             const daysInMonth = new Date(activeYear, activeMonth + 1, 0).getDate();
             
-            // Untuk menghitung total bulanan yang tampil di UI
             let monthlyTotalEarned = 0;
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const current = new Date(activeYear, activeMonth, day);
                 if (current < START_DATE) continue;
+                
+                // Membuat string tanggal untuk dikirim ke renderBox
+                const dateStr = `${day} ${MONTH_NAMES[activeMonth]} ${activeYear}`;
                 
                 const dayIndex = Math.floor((current - START_DATE) / (1000 * 60 * 60 * 24));
                 const threshold = (dayIndex + 1) * DAILY_REQD;
@@ -247,8 +240,8 @@
                         <p class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Target Rp 10.000 / Hari</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        ${renderBox('Bayu', resB)}
-                        ${renderBox('Faulan', resF)}
+                        ${renderBox('Bayu', resB, dateStr)}
+                        ${renderBox('Faulan', resF, dateStr)}
                     </div>
                 `;
                 container.appendChild(card);
