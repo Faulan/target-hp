@@ -146,11 +146,19 @@
             document.getElementById('modal-title').innerText = `INPUT : ${person}`;
             document.getElementById('modal-subtitle').innerText = `Target Rp 10.000 / Hari`;
             const inputField = document.getElementById('amount-input');
-            inputField.value = earnedNow === 0 ? '' : earnedNow; 
+            
+            // Tampilan tetap kosong jika belum ada input di hari itu agar tidak bingung
+            inputField.value = ''; 
+            
             document.getElementById('input-modal').classList.remove('hidden');
+            
             document.getElementById('save-btn').onclick = function() {
                 const newVal = parseInt(inputField.value) || 0;
-                data[currentTargetPerson] = (data[currentTargetPerson] - earnedNow) + newVal;
+                
+                // LOGIKA BARU: Akumulasi total saldo
+                // Sistem menambahkan nominal baru ke total saldo yang sudah ada
+                data[currentTargetPerson] += newVal;
+                
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
                 closeModal();
                 render();
@@ -163,18 +171,32 @@
         }
 
         function calcStatus(saldo, threshold) {
+            // threshold adalah total tabungan yang seharusnya terkumpul sampai hari ke-N
+            // Contoh: Hari ke-3, threshold = 30.000
+            
             const isLunas = saldo >= threshold;
             let earnedThisDay = 0;
-            if (isLunas) {
+
+            if (saldo >= threshold) {
+                // Jika saldo total sudah melewati batas hari ini, berarti hari ini lunas (10rb)
                 earnedThisDay = DAILY_REQD;
             } else if (saldo > (threshold - DAILY_REQD)) {
+                // Jika saldo total berada di antara (threshold - 10rb) dan threshold,
+                // berarti ada sisa/sebagian uang yang masuk ke hari ini.
                 earnedThisDay = saldo % DAILY_REQD;
+                if (earnedThisDay === 0 && saldo > 0) earnedThisDay = 0; 
+                // Logika sisa: jika saldo 15rb, hari 1 lunas (10rb), hari 2 dapat 5rb.
+                earnedThisDay = saldo - (threshold - DAILY_REQD);
+            } else {
+                // Saldo belum mencapai hari ini sama sekali
+                earnedThisDay = 0;
             }
+
             return {
                 isLunas: isLunas,
-                earned: earnedThisDay,
-                gap: Math.max(0, threshold - saldo),
-                todayValue: earnedThisDay
+                earned: Math.max(0, earnedThisDay),
+                gap: Math.max(0, DAILY_REQD - earnedThisDay),
+                todayValue: Math.max(0, earnedThisDay)
             };
         }
 
@@ -201,15 +223,22 @@
             container.innerHTML = '';
             document.getElementById('current-month-title').innerText = `${MONTH_NAMES[activeMonth]} ${activeYear}`;
             const daysInMonth = new Date(activeYear, activeMonth + 1, 0).getDate();
-            let monthlyTotal = 0;
+            
+            // Untuk menghitung total bulanan yang tampil di UI
+            let monthlyTotalEarned = 0;
+
             for (let day = 1; day <= daysInMonth; day++) {
                 const current = new Date(activeYear, activeMonth, day);
                 if (current < START_DATE) continue;
+                
                 const dayIndex = Math.floor((current - START_DATE) / (1000 * 60 * 60 * 24));
                 const threshold = (dayIndex + 1) * DAILY_REQD;
+                
                 const resB = calcStatus(data.bayu, threshold);
                 const resF = calcStatus(data.faulan, threshold);
-                monthlyTotal += (resB.todayValue + resF.todayValue);
+                
+                monthlyTotalEarned += (resB.todayValue + resF.todayValue);
+
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100";
                 card.innerHTML = `
@@ -224,7 +253,7 @@
                 `;
                 container.appendChild(card);
             }
-            document.getElementById('monthly-total').innerText = 'Rp ' + monthlyTotal.toLocaleString('id-ID');
+            document.getElementById('monthly-total').innerText = 'Rp ' + monthlyTotalEarned.toLocaleString('id-ID');
             updateDash();
         }
 
